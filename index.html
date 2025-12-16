@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Toy Workshop — Control Center</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <style>
+        :root{
+            --bg:#f5f7fb;--card:#ffffff;--muted:#6b7280;--accent:#0071e3;--glass:rgba(255,255,255,0.6);
+            --radius:14px;--pad:22px
+        }
+        *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+        body{margin:0;background:linear-gradient(180deg,#f7f9fc 0%,#eef4fb 100%);color:#0b1220}
+        header{padding:36px 48px;display:flex;align-items:center;gap:20px}
+        .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#004aad);display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+        h1{font-size:20px;margin:0}
+        p.lead{margin:4px 0 0;color:var(--muted);font-size:13px}
+
+        .container{display:grid;grid-template-columns:1fr 420px;gap:28px;padding:20px 48px 48px}
+        .card{background:var(--card);border-radius:var(--radius);padding:var(--pad);box-shadow:0 8px 30px rgba(15,23,42,0.06)}
+
+        /* Left column */
+        .dashboard{display:grid;grid-template-rows:auto auto;gap:20px}
+        .top-row{display:flex;gap:20px}
+        .panel{flex:1}
+        .small{display:flex;gap:12px}
+        .stat{flex:1;padding:16px;border-radius:12px;background:linear-gradient(180deg,#ffffff,#fbfdff);}
+        .stat h3{margin:0;font-size:12px;color:var(--muted)}
+        .stat .v{font-size:20px;font-weight:600;margin-top:6px}
+
+        /* lists */
+        .list{margin-top:12px}
+        .item{display:flex;justify-content:space-between;padding:12px;border-radius:10px;border:1px solid #eef2f6;margin-bottom:8px}
+        .item .meta{color:var(--muted);font-size:13px}
+
+        /* Right column */
+        .forms{display:flex;flex-direction:column;gap:14px}
+        label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+        input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #e6edf6;background:transparent}
+        button{background:var(--accent);color:white;padding:12px 14px;border-radius:10px;border:0;font-weight:600;cursor:pointer}
+        .muted{color:var(--muted);font-size:12px}
+
+        footer{padding:18px 48px;color:var(--muted);font-size:13px}
+
+        @media (max-width:900px){.container{grid-template-columns:1fr;padding:12px}.logo{width:40px;height:40px}.card{padding:16px}}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">SW</div>
+        <div>
+            <h1>Toy Workshop — Control Center</h1>
+            <p class="lead">Manage toys, elves and deliveries — live simulation via WebSocket</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="dashboard">
+            <div class="card top-row">
+                <div class="panel small">
+                    <div class="stat">
+                        <h3>Total Toys</h3>
+                        <div class="v" id="total-toys">—</div>
+                    </div>
+                    <div class="stat">
+                        <h3>Pending Orders</h3>
+                        <div class="v" id="total-orders">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin:0 0 8px">Elf Utilization</h3>
+                <div id="elf-chart" style="height:240px"></div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin:0 0 8px">Available Toys</h3>
+                <div id="toys-list" class="list">Loading…</div>
+            </div>
+
+            <div class="card" style="margin-top:12px">
+                <h3 style="margin:0 0 8px">Pending Orders</h3>
+                <div id="orders-list" class="list">Loading…</div>
+            </div>
+        </div>
+
+        <aside class="forms">
+            <div class="card">
+                <h3 style="margin:0 0 12px">Add Order</h3>
+                <div class="muted">Create a delivery for a child</div>
+                <div style="height:12px"></div>
+                <label>Child</label>
+                <input id="order-child" placeholder="Child name">
+                <label>Toy</label>
+                <select id="order-toy"></select>
+                <label>Priority (1-5)</label>
+                <input id="order-priority" type="number" min="1" max="5" value="3">
+                <label>Address</label>
+                <input id="order-address" placeholder="Delivery address">
+                <label>Message to Kid (optional)</label>
+                <textarea id="order-message" placeholder="Write a special message..." style="height:60px;resize:none"></textarea>
+                <div style="height:12px"></div>
+                <button id="btn-add-order">Add Order</button>
+            </div>
+
+            <div class="card">
+                <h3 style="margin:0 0 12px">Add Toy</h3>
+                <div class="muted">Add a new toy to the catalogue</div>
+                <div style="height:12px"></div>
+                <label>Name</label>
+                <input id="toy-name" placeholder="Teddy Bear">
+                <label>Category</label>
+                <input id="toy-category" placeholder="Soft, Electronics, Blocks">
+                <label>Build time (minutes)</label>
+                <input id="toy-build" type="number" value="20">
+                <label>Stock</label>
+                <input id="toy-stock" type="number" value="5">
+                <div style="height:12px"></div>
+                <button id="btn-add-toy">Add Toy</button>
+            </div>
+
+            <div class="card">
+                <h3 style="margin:0 0 12px">Add Elf</h3>
+                <div class="muted">Create an elf (skills comma-separated)</div>
+                <div style="height:12px"></div>
+                <label>Name</label>
+                <input id="elf-name" placeholder="Buddy">
+                <label>Skills</label>
+                <input id="elf-skills" placeholder="Soft, Blocks">
+                <label>Capacity (minutes)</label>
+                <input id="elf-capacity" type="number" value="120">
+                <div style="height:12px"></div>
+                <button id="btn-add-elf">Add Elf</button>
+            </div>
+
+        </aside>
+    </div>
+
+    <footer>Local server: <a href="/">/</a> — API: <span class="muted">/api/state</span></footer>
+
+    <script>
+        async function fetchState(){
+            try{
+                const r = await fetch('/api/state');
+                const data = await r.json();
+                
+                const toysList = document.getElementById('toys-list');
+                const toysSelect = document.getElementById('order-toy');
+                toysList.innerHTML = '';
+                toysSelect.innerHTML = '';
+                
+                data.toys.forEach(t =>{
+                    const it = document.createElement('div');
+                    it.className='item';
+                    it.innerHTML = `<div><strong>${escapeHtml(t.name)}</strong><div class='meta'>${escapeHtml(t.category)} • ${t.build_time}m</div></div><div style="display:flex;gap:8px"><span class='meta'>stock ${t.stock}</span><button style="background:#ef4444;color:white;padding:4px 8px;border:0;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap" onclick="removeToy('${escapeHtml(t.name)}')">Remove</button></div>`;
+                    toysList.appendChild(it);
+                    
+                    const opt = document.createElement('option');
+                    opt.value = t.name;
+                    opt.textContent = t.name + ' — ' + t.category;
+                    toysSelect.appendChild(opt);
+                });
+
+                const ordersList = document.getElementById('orders-list');
+                ordersList.innerHTML='';
+                data.orders.forEach((o, idx) =>{
+                    const it = document.createElement('div');
+                    it.className='item';
+                    it.innerHTML = `<div style="flex:1"><strong>${escapeHtml(o.child)}</strong><div class='meta'>${escapeHtml(o.toy)} • priority ${o.priority}</div><div class='meta'>${escapeHtml(o.address)}</div>${o.message ? '<div class="meta" style="font-style:italic">"' + escapeHtml(o.message) + '"</div>' : ''}</div><button style="background:#ef4444;color:white;padding:4px 8px;border:0;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap" onclick="cancelOrder(${idx})">Cancel</button>`;
+                    ordersList.appendChild(it);
+                });
+
+                document.getElementById('total-toys').textContent = data.toys.length;
+                document.getElementById('total-orders').textContent = data.orders.length;
+                drawElfChart(data);
+            }catch(err){
+                console.error('fetchState error:', err);
+            }
+        }
+
+        function drawElfChart(data){
+            const names = data.elves.map(e=>e.name);
+            const used = data.elves.map(e=> e.assigned.reduce((s,n)=> s + (data.toys.find(t=>t.name===n)?.build_time||0), 0));
+            const remaining = data.elves.map((e,i)=> Math.max(0, e.capacity - used[i]));
+            const trace1 = {x:names,y:used,type:'bar',name:'Used Time',marker:{color:'#0071e3'}};
+            const trace2 = {x:names,y:remaining,type:'bar',name:'Remaining',marker:{color:'#d1e9ff'}};
+            const layout = {barmode:'stack',paper_bgcolor:'white',plot_bgcolor:'white',margin:{t:30}};
+            Plotly.react('elf-chart',[trace1,trace2],layout,{displayModeBar:false});
+        }
+
+        function escapeHtml(s){
+            return (s||'').toString().replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        }
+
+        async function postJson(url, body){
+            const r = await fetch(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+            return r.json();
+        }
+
+        async function removeToy(name){
+            if(!confirm(`Remove toy "${name}"?`)) return;
+            try{
+                const res = await fetch(`/api/remove_toy/${encodeURIComponent(name)}`, {method:'DELETE'});
+                const data = await res.json();
+                if(data.error) return alert(data.error);
+                await fetchState();
+            }catch(e){
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function cancelOrder(idx){
+            if(!confirm('Cancel this order?')) return;
+            try{
+                const res = await fetch(`/api/cancel_order/${idx}`, {method:'DELETE'});
+                const data = await res.json();
+                if(data.error) return alert(data.error);
+                await fetchState();
+            }catch(e){
+                alert('Error: ' + e.message);
+            }
+        }
+
+        document.getElementById('btn-add-toy').onclick = async ()=>{
+            const name = document.getElementById('toy-name').value.trim();
+            if(!name) return alert('Name required');
+            const res = await postJson('/api/add_toy', {
+                name,
+                category: document.getElementById('toy-category').value || 'General',
+                build_time: parseInt(document.getElementById('toy-build').value) || 10,
+                stock: parseInt(document.getElementById('toy-stock').value) || 1
+            });
+            if(res.error) return alert(res.error);
+            await fetchState();
+            document.getElementById('toy-name').value='';
+            document.getElementById('toy-category').value='';
+            document.getElementById('toy-build').value='20';
+            document.getElementById('toy-stock').value='5';
+        };
+
+        document.getElementById('btn-add-elf').onclick = async ()=>{
+            const name = document.getElementById('elf-name').value.trim();
+            if(!name) return alert('Name required');
+            const res = await postJson('/api/add_elf', {
+                name,
+                skills: document.getElementById('elf-skills').value,
+                capacity: parseInt(document.getElementById('elf-capacity').value) || 120
+            });
+            if(res.error) return alert(res.error);
+            await fetchState();
+            document.getElementById('elf-name').value='';
+            document.getElementById('elf-skills').value='';
+            document.getElementById('elf-capacity').value='120';
+        };
+
+        document.getElementById('btn-add-order').onclick = async ()=>{
+            const child = document.getElementById('order-child').value.trim();
+            const toy = document.getElementById('order-toy').value;
+            const priority = parseInt(document.getElementById('order-priority').value) || 3;
+            const address = document.getElementById('order-address').value.trim();
+            const message = document.getElementById('order-message').value.trim();
+            if(!child||!toy||!address) return alert('Child, Toy and Address are required');
+            const res = await postJson('/api/add_order',{child,toy,priority,address,message});
+            if(res.error) return alert(res.error);
+            await fetchState();
+            document.getElementById('order-child').value='';
+            document.getElementById('order-toy').selectedIndex=0;
+            document.getElementById('order-priority').value='3';
+            document.getElementById('order-address').value='';
+            document.getElementById('order-message').value='';
+        };
+
+        fetchState();
+    </script>
+
+    <footer style="margin-top:40px;padding:24px;text-align:center;border-top:1px solid #d5d5d7;background:#fafafa;color:#666;font-size:13px">
+        <p style="margin:0">Created with the help of <strong>GitHub Copilot AI</strong></p>
+        <p style="margin:8px 0 0 0">Santa's Workshop Management System © 2025</p>
+        <p style="margin:12px 0 0 0"><a href="PROJECT_DOCUMENTATION.txt" target="_blank" style="color:#0071e3;text-decoration:none;font-weight:500">View Project Documentation</a> for build instructions and technical details</p>
+    </footer>
+</body>
+</html>

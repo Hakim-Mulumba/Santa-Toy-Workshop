@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Santa Workshop</title>
+  </head>
+  <body>
+    {% if error %}
+      <p style="color: red">{{ error }}</p>
+    {% endif %}
+
+    <h1>Orders</h1>
+    <ul>
+      {% for o in orders %}
+        <li>{{ o.child }} — {{ o.toy }} (priority {{ o.priority }})</li>
+      {% else %}
+        <li>No orders yet</li>
+      {% endfor %}
+    </ul>
+
+    <h2>Add Order</h2>
+    <form action="/add_order" method="post">
+      <input name="child" placeholder="Child" required />
+      <input name="toy" placeholder="Toy" required />
+      <input name="priority" type="number" min="1" max="5" value="3" required />
+      <input name="address" placeholder="Address" required />
+      <button type="submit">Add</button>
+    </form>
+  </body>
+</html>

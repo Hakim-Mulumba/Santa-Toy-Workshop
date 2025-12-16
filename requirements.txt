@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+plotly
+matplotlib
+python-multipart
+jinja2
